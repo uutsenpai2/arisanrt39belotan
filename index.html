@@ -64,14 +64,17 @@
                             <i class="fa-regular fa-calendar-check text-[10px]"></i> <span id="navMonthYear">Maret 2026</span>
                         </span>
                         <!-- Google Sheet Status Badge in Navbar -->
-                        <span id="navSheetStatus" class="hidden sm:inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
-                            <i class="fa-solid fa-circle text-[8px] text-emerald-400"></i> Sheet Siap Digunakan
+                        <span id="navSheetStatus" class="hidden sm:inline-flex items-center gap-1.5 text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 transition-all">
+                            <i class="fa-solid fa-spinner fa-spin text-amber-400 text-[9px]"></i> Menghubungkan Google Sheet...
                         </span>
                     </div>
                 </div>
             </div>
             
             <div class="flex items-center gap-2">
+                <button onclick="modalUbahPassword()" id="adminUbahPassBtn" class="hidden bg-slate-800/90 hover:bg-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold transition items-center gap-1.5 border border-slate-600 shadow-sm cursor-pointer text-amber-300">
+                    <i class="fa-solid fa-key text-xs"></i> <span class="hidden sm:inline">Ubah Password</span>
+                </button>
                 <button onclick="handleAdminToggle()" id="adminBtn" class="bg-slate-800/90 hover:bg-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 border border-slate-600 shadow-sm cursor-pointer">
                     <i class="fa-solid fa-lock text-amber-400"></i> <span id="adminBtnText">Mode Warga</span>
                 </button>
@@ -295,6 +298,43 @@
                             </div>
                             <button onclick="tambahAnggotaArisanBaru()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-sm w-full sm:w-auto cursor-pointer">
                                 <i class="fa-solid fa-plus mr-1"></i> Simpan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ubah Password Mode Pengurus RT -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-amber-200">
+                    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <h3 class="font-bold text-xs text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-key text-amber-500"></i> Ubah Password Mode Pengurus RT
+                        </h3>
+                        <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                            <i class="fa-solid fa-cloud-arrow-up text-[9px]"></i> Tersimpan otomatis ke Google Script
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 mb-1">Password Baru:</label>
+                            <div class="relative">
+                                <input type="password" id="inputAdminPassBaru" placeholder="Masukkan password baru" class="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl px-3.5 py-2 font-mono focus:outline-none focus:border-amber-500">
+                                <button type="button" onclick="togglePassVisibility('inputAdminPassBaru', 'eyeIcon1')" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                                    <i id="eyeIcon1" class="fa-regular fa-eye text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 mb-1">Konfirmasi Password:</label>
+                            <div class="relative">
+                                <input type="password" id="inputAdminPassConfirm" placeholder="Ulangi password baru" class="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl px-3.5 py-2 font-mono focus:outline-none focus:border-amber-500">
+                                <button type="button" onclick="togglePassVisibility('inputAdminPassConfirm', 'eyeIcon2')" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                                    <i id="eyeIcon2" class="fa-regular fa-eye text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <button onclick="simpanPasswordBaruAdmin()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
+                                <i class="fa-solid fa-floppy-disk"></i> Simpan Password Baru
                             </button>
                         </div>
                     </div>
@@ -728,6 +768,7 @@ function writeAllDatabase(ss, data) {
   var rowsSet = [
     ['Iuran Arisan per Slot', data.iuranArisan || 10000],
     ['Iuran Kas RT per Warga', data.iuranKas || 5000],
+    ['Password Admin', data.adminPassword || 'rt39'],
     ['Terakhir Diperbarui', new Date().toLocaleString('id-ID')]
   ];
   shSetting.getRange(2, 1, rowsSet.length, 2).setValues(rowsSet);
@@ -809,6 +850,7 @@ function readAllDatabase(ss) {
     valsS.forEach(function(r) {
       if (String(r[0]).indexOf('Iuran Arisan') !== -1) result.iuranArisan = Number(r[1]);
       if (String(r[0]).indexOf('Iuran Kas') !== -1) result.iuranKas = Number(r[1]);
+      if (String(r[0]).indexOf('Password Admin') !== -1 && r[1]) result.adminPassword = String(r[1]).trim();
     });
   }
 
@@ -915,13 +957,14 @@ function clearDataRows(sheet) {
 
         let appData = {
             isAdmin: false,
+            adminPassword: "rt39",
             iuranArisan: 10000, // Nominal baru: Rp 10.000 / slot
             iuranKas: 5000,     // Nominal baru: Rp 5.000 / warga
             filterArisanActive: 'all',
             filterKasActive: 'all',
             winnersToPick: 1,
             googleSheetUrl: DEFAULT_SHEET_URL,
-            autoSyncSheet: false,
+            autoSyncSheet: true, // Otomatis tersimpan ke Google Sheet
             lastSheetSync: '',
             
             // Peserta & Slot Arisan
@@ -1173,7 +1216,7 @@ function clearDataRows(sheet) {
                     title: '🔐 Mode Pengurus RT',
                     html: '<p class="text-xs text-slate-500 mb-2">Masukkan password untuk mengaktifkan mode admin RT 39.</p>',
                     input: 'password',
-                    inputPlaceholder: 'Password default: rt39',
+                    inputPlaceholder: 'masukkan password',
                     inputAttributes: {
                         autocapitalize: 'off',
                         autocorrect: 'off'
@@ -1185,7 +1228,9 @@ function clearDataRows(sheet) {
                     cancelButtonColor: '#64748b'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        if (result.value === DEFAULT_ADMIN_PASS) {
+                        const enteredPass = (result.value || '').trim();
+                        const currentPass = (appData.adminPassword || DEFAULT_ADMIN_PASS).trim();
+                        if (enteredPass === currentPass) {
                             appData.isAdmin = true;
                             saveAndRenderAll();
                             Swal.fire({
@@ -1219,6 +1264,17 @@ function clearDataRows(sheet) {
                 } else {
                     adminBtnText.innerText = 'Mode Warga';
                     adminBtn.className = 'bg-slate-800/90 hover:bg-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 border border-slate-600 shadow-sm cursor-pointer text-white';
+                }
+            }
+
+            const adminUbahPassBtn = document.getElementById('adminUbahPassBtn');
+            if (adminUbahPassBtn) {
+                if (appData.isAdmin) {
+                    adminUbahPassBtn.classList.remove('hidden');
+                    adminUbahPassBtn.classList.add('inline-flex');
+                } else {
+                    adminUbahPassBtn.classList.add('hidden');
+                    adminUbahPassBtn.classList.remove('inline-flex');
                 }
             }
 
@@ -1280,6 +1336,14 @@ function clearDataRows(sheet) {
                 appData.googleSheetUrl = DEFAULT_SHEET_URL;
             }
 
+            // Password admin default jika belum diset
+            if (!appData.adminPassword) {
+                appData.adminPassword = DEFAULT_ADMIN_PASS;
+            }
+
+            // Pastikan sinkronisasi otomatis selalu aktif
+            appData.autoSyncSheet = true;
+
             // Migrasi nominal baru dari instruksi (Arisan 10.000 & Kas 5.000)
             if (!appData.iuranArisan || appData.iuranArisan === 50000) {
                 appData.iuranArisan = 10000;
@@ -1292,8 +1356,8 @@ function clearDataRows(sheet) {
         function saveData() {
             localStorage.setItem('arisanRT39_V2_Data', JSON.stringify(appData));
             
-            // Auto Sync ke Google Sheet jika fitur diaktifkan
-            if (appData.autoSyncSheet && appData.googleSheetUrl) {
+            // Setiap perubahan otomatis tersimpan ke Google Sheet
+            if (appData.googleSheetUrl) {
                 triggerBackgroundSheetSync();
             }
         }
@@ -1323,6 +1387,9 @@ function clearDataRows(sheet) {
             renderRiwayatFull();
             updateSpinUIElements();
             setupWheel();
+
+            // Terkoneksi langsung dan otomatis ke Google Sheet saat aplikasi dibuka
+            initAutoConnectSheet();
 
             window.addEventListener('resize', () => {
                 if (document.getElementById('content-kocok')?.classList.contains('active')) {
